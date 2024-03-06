@@ -10,18 +10,19 @@ from custom_operators import (
 def dummy_callable(action):
     return f'{datetime.now()}: {action} NetSuite GL posting transactions data pipeline'
 
-def get_netsuite_results(config, type, searchId, dag):
+def get_netsuite_results(config, search_type, search_id, filter_expression, dag):
     return NetSuiteSearchOperator(
-        task_id=f'extract_netsuite_{type}_{searchId}',
-        type=type,
-        searchId=searchId,
+        task_id=f'extract_netsuite_{search_type}_{search_id}',
+        search_type=search_type,
+        search_id=search_id,
+        filter_expression=filter_expression,
         dag=dag
     )
 
-def create_dag(dag_id, interval, config, type, searches):
+def create_dag(dag_id, interval, config, search_type, searches):
     with DAG(
         dag_id=dag_id,
-        description=f'Ingested new GL posting {{type}} from NetSuite',
+        description=f'Ingested new GL posting {{search_type}} from NetSuite',
         schedule_interval=interval,
         start_date=datetime(2024, 2, 25, 2),
         catchup=False
@@ -35,8 +36,12 @@ def create_dag(dag_id, interval, config, type, searches):
         )
 
         # netsuite_results = [
-        #     get_netsuite_results(config, type, searchId, dag)
-        #     for searchId in searches
+        #     get_netsuite_results(
+        #         config,
+        #         search_type,
+        #         search_id,
+        #         dag)
+        #     for search_id in searches
         # ]
 
         finish = PythonOperator(
@@ -54,14 +59,14 @@ if len(config.TRANSACTION_TYPES) > 5:
     raise ValueError('Exceeds NetSuite SuiteScript usage governance limit')
 
 for i, item in enumerate(config.TRANSACTION_TYPES.items()):
-    type, searches = item
-    dag_id = f'netsuite_data_pipeline_{type}'
+    search_type, searches = item
+    dag_id = f'netsuite_data_pipeline_{search_type}'
     interval = f'{str(i * 10)} * * * *'
 
     globals()[dag_id] = create_dag(
         dag_id,
         interval,
         config,
-        type,
+        search_type,
         searches
     )
