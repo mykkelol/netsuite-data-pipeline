@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
@@ -12,7 +12,7 @@ def dummy_callable(action):
 
 def get_netsuite_results(config, type, searchId, dag):
     return NetSuiteSearchOperator(
-        task_id=f'extract_netsuite_{type}_{search}',
+        task_id=f'extract_netsuite_{type}_{searchId}',
         type=type,
         searchId=searchId,
         dag=dag

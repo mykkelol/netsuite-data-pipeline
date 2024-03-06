@@ -7,4 +7,5 @@
 # Folders #
 ######################
 dags/__pycache__
+dags/custom_operators/__pycache__
 logs

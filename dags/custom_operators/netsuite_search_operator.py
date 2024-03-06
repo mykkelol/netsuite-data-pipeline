@@ -1,3 +1,5 @@
+from requests_oauthlib import OAuth1Session
+
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 
