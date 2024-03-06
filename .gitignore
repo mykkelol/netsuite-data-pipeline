@@ -1,0 +1,10 @@
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# Folders #
+######################
+dags/__pycache__
+logs
