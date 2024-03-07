@@ -10,9 +10,10 @@ from custom_operators import (
 def dummy_callable(action):
     return f'{datetime.now()}: {action} NetSuite GL posting transactions data pipeline'
 
-def get_netsuite_results(config, search_type, search_id, filter_expression, dag):
+def get_netsuite_results(config, search_type, search_id, dag, filter_expression=None):
     return NetSuiteSearchOperator(
-        task_id=f'extract_netsuite_{search_type}_{search_id}',
+        task_id=f'extract_{search_id}',
+        search_types=config.SUPPORTED_RECORD_TYPES,
         search_type=search_type,
         search_id=search_id,
         filter_expression=filter_expression,
@@ -35,14 +36,14 @@ def create_dag(dag_id, interval, config, search_type, searches):
             dag=dag
         )
 
-        # netsuite_results = [
-        #     get_netsuite_results(
-        #         config,
-        #         search_type,
-        #         search_id,
-        #         dag)
-        #     for search_id in searches
-        # ]
+        netsuite_results = [
+            get_netsuite_results(
+                config=config,
+                search_type=search_type,
+                search_id=search_id,
+                dag=dag)
+            for search_id in searches
+        ]
 
         finish = PythonOperator(
             task_id='finishing_pipeline',
@@ -51,7 +52,7 @@ def create_dag(dag_id, interval, config, search_type, searches):
             dag=dag
         )
 
-        start >> finish
+        start >> netsuite_results >> finish
     
     return dag
 

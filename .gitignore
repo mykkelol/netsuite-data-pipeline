@@ -4,6 +4,10 @@
 *.sql
 *.sqlite
 
+# Logs and databases #
+######################
+*.env
+
 # Folders #
 ######################
 dags/__pycache__
