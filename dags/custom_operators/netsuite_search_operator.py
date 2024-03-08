@@ -1,6 +1,7 @@
 from requests_oauthlib import OAuth1Session
 from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
+from airflow.models import Variable
 
 class NetSuiteSearchOperator(BaseOperator):
     @apply_defaults
@@ -55,6 +56,33 @@ class NetSuiteSearchOperator(BaseOperator):
             self._validate_search()
             if self.filter_expression:
                 self._add_filters()
-            return ['test']
+
+            script_id = Variable.get('netsuite_script_id')
+            account_number = Variable.get('netsuite_account_number')
+            
+            url = f'https://{account_number}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script={script_id}'
+
+            oauth = OAuth1Session(
+                client_key=Variable.get('netsuite_consumer_key'),
+                client_secret=Variable.get('netsuite_consumer_secret'),
+                resource_owner_key=Variable.get('netsuite_token_id'),
+                resource_owner_secret=Variable.get('netsuite_token_secret'),
+                realm=account_number,
+                signature_method='HMAC-SHA256',
+            )
+
+            headers = { 'Content-Type': 'application/json' }
+
+            response = oauth.get(
+                url,
+                headers=headers
+            )
+            
+            response.raise_for_status()
+            data = response.text
+            print(data)
+            return data
+        
         except Exception as err:
+            print(err)
             raise err

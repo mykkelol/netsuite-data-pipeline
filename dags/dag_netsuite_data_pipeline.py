@@ -8,6 +8,8 @@ from custom_operators import (
 )
 
 def dummy_callable(action):
+    import sys
+    print(f'SYSPATH IS SET TO {sys.path}')
     return f'{datetime.now()}: {action} NetSuite GL posting transactions data pipeline'
 
 def get_netsuite_results(config, search_type, search_id, dag, filter_expression=None):
