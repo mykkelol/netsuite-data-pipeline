@@ -3,6 +3,9 @@ from airflow.models.baseoperator import BaseOperator
 from airflow.utils.decorators import apply_defaults
 from airflow.models import Variable
 
+from log import log
+
+@log
 class NetSuiteSearchOperator(BaseOperator):
     @apply_defaults
     def __init__(
@@ -63,7 +66,7 @@ class NetSuiteSearchOperator(BaseOperator):
             url = f'https://{account_number}.restlets.api.netsuite.com/app/site/hosting/restlet.nl?script={script_id}'
 
             oauth = OAuth1Session(
-                client_key=Variable.get('netsuite_consumer_key'),
+                client_key=Variable.get('netsuite_consumer_api_key'),
                 client_secret=Variable.get('netsuite_consumer_secret'),
                 resource_owner_key=Variable.get('netsuite_token_id'),
                 resource_owner_secret=Variable.get('netsuite_token_secret'),
@@ -80,9 +83,10 @@ class NetSuiteSearchOperator(BaseOperator):
             
             response.raise_for_status()
             data = response.text
-            print(data)
+            
+            self.logger.info(data)
             return data
-        
+
         except Exception as err:
             print(err)
             raise err

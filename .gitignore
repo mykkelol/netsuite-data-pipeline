@@ -10,6 +10,12 @@
 
 # Folders #
 ######################
-dags/__pycache__
-dags/custom_operators/__pycache__
 logs
+
+## Python
+__pycache__
+.vscode
+.idea
+.pytest_cache
+*.pyc
+.coverage

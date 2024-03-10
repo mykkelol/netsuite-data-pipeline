@@ -61,6 +61,9 @@ services:
 
   airflow-webserver:
     <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      PYTHONPATH: /opt/airflow/modules
     command: webserver
     ports:
       - '8080:8080'
@@ -78,6 +81,9 @@ services:
 
   airflow-scheduler:
     <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      PYTHONPATH: /opt/airflow/modules
     command: scheduler
     healthcheck:
       test: ['CMD', 'curl', '--fail', 'http://localhost:8974/health']
@@ -93,6 +99,9 @@ services:
 
   airflow-triggerer:
     <<: *airflow-common
+    environment:
+      <<: *airflow-common-env
+      PYTHONPATH: /opt/airflow/modules
     command: triggerer
     healthcheck:
       test: ['CMD-SHELL', 'airflow jobs check --job-type TriggererJob --hostname "$${HOSTNAME}"']
