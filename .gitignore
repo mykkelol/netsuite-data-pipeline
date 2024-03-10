@@ -11,6 +11,7 @@
 # Folders #
 ######################
 logs
+data
 
 ## Python
 __pycache__
