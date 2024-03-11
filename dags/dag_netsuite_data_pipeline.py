@@ -4,21 +4,39 @@ from airflow.operators.python import PythonOperator
 
 from dags_config import Config as config
 from custom_operators import (
-    NetSuiteSearchOperator
+    NetSuiteToS3Operator
 )
 
 def dummy_callable(action):
-    import sys
-    print(f'SYSPATH IS SET TO {sys.path}')
-    return f'{datetime.now()}: {action} NetSuite GL posting transactions data pipeline'
+    return (
+        f'{datetime.now()}: {action} '
+        f'NetSuite GL posting transactions data pipeline'
+    )
 
-def get_netsuite_results(config, search_type, search_id, dag, filter_expression=None):
-    return NetSuiteSearchOperator(
+def extract_netsuite_results(
+        config,
+        search_type,
+        search_id,
+        dag,
+    ):
+    return NetSuiteToS3Operator(
         task_id=f'extract_{search_id}',
         search_types=config.SUPPORTED_RECORD_TYPES,
         search_type=search_type,
         search_id=search_id,
-        filter_expression=filter_expression,
+        conn_id=config.S3_CONN_ID,
+        bucket_name=config.LANDING_BUCKET,
+        filename='netsuite_extracts_{{ ds_nodash }}',
+        filter_expression=[
+            ['taxline','is','F'], 
+            'AND', 
+            ['cogs','is','F'], 
+            'AND', 
+            ['posting','is','T'], 
+            'AND', 
+            ['accountingbook','anyof',config.ACCOUNTING_BOOKS['secondary']]
+        ],
+        columns=None,
         dag=dag
     )
 
@@ -38,8 +56,8 @@ def create_dag(dag_id, interval, config, search_type, searches):
             dag=dag
         )
 
-        netsuite_results = [
-            get_netsuite_results(
+        load_netsuite_to_s3_landing = [
+            extract_netsuite_results(
                 config=config,
                 search_type=search_type,
                 search_id=search_id,
@@ -54,7 +72,7 @@ def create_dag(dag_id, interval, config, search_type, searches):
             dag=dag
         )
 
-        start >> netsuite_results >> finish
+        start >> load_netsuite_to_s3_landing >> finish
     
     return dag
 

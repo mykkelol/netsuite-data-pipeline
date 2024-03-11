@@ -1,1 +1,1 @@
-from custom_operators.netsuite_search_operator import NetSuiteSearchOperator
+from custom_operators.netsuite_to_s3_operator import NetSuiteToS3Operator

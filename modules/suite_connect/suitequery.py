@@ -1,6 +1,10 @@
+import json
 from requests_oauthlib import OAuth1Session
 from airflow.models import Variable
 
+from log import log
+
+@log
 class SuiteQuery:
     SIGNATURE_METHOD = 'HMAC-SHA256'
     HEADERS = { 'Content-Type': 'application/json' }
@@ -16,7 +20,22 @@ class SuiteQuery:
         self._token_secret = ''
         self._results = []
 
-    def set_variables(self):
+    def _get_url(self):
+        url = (
+            f'https://{self._account_id}'
+            f'.restlets.api.netsuite.com'
+            f'/app/site/hosting/restlet.nl'
+            f'?script={self._script_id}'
+        )
+
+        if self.filters: 
+            url += f'&filters={self.filters}'
+        if self.columns: 
+            url += f'&columns={self.columns}'
+
+        return url
+
+    def _set_variables(self):
         variable_keys = {
             '_account_id': 'netsuite_account_id',
             '_script_id': 'netsuite_script_id',
@@ -29,15 +48,7 @@ class SuiteQuery:
         for variable_value, variable_key in variable_keys.items():
             setattr(self, variable_value, Variable.get(variable_key))
 
-    def _get_url(self):
-        return (
-            f'https://{self._account_id}'
-            f'.restlets.api.netsuite.com'
-            f'/app/site/hosting/restlet.nl'
-            f'?script={self._script_id}'
-        )
-
-    def _get_connection(self):
+    def _set_connection(self):
         conn = OAuth1Session(
             client_key=self._consumer_key,
             client_secret=self._consumer_secret,
@@ -48,14 +59,28 @@ class SuiteQuery:
         )
         
         return conn
-
-    def get_results(self):
-        self.set_variables()
-        conn = self._get_connection()
-        response = conn.get(
-            self._get_url(),
-            headers=SuiteQuery.HEADERS
+    
+    @staticmethod
+    def valid_response(response):
+        return (
+            response.status_code == 200
+            and response.text.strip()
         )
-        response.raise_for_status()
-        data = response.text
-        return data
+    
+    def extract_results(self):
+        try:
+            self._set_variables()
+            conn = self._set_connection()
+            
+            response = conn.get(
+                self._get_url(),
+                headers=SuiteQuery.HEADERS
+            )
+            response.raise_for_status()
+            
+            if (self.valid_response(response)):
+                data = json.loads(response.text).get('results')
+                return data
+            
+        except Exception as err:
+            self.logger.info(f"Error occurred: {err}")
