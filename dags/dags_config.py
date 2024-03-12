@@ -2,7 +2,7 @@ class Config:
     POSTGRES_CONFIG = {
         'host': 'host.docker.internal',
         'port': '5432',
-        'db': 0
+        'db': 'finance'
     }
 
     POSTGRES_CONN_ID = 'postgres_localhost'
@@ -18,7 +18,7 @@ class Config:
 
     TRANSACTION_TYPES = {
         'transactions': [
-            'customsearch_ms_gl_posting_transactions_india',
+            'customsearch_gl_posting_transactions_india',
         ]
     }
 

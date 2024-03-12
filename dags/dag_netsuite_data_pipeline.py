@@ -1,6 +1,8 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.providers.postgres.operators.postgres import PostgresOperator
+from airflow.utils.helpers import chain
 
 from dags_config import Config as config
 from custom_operators import (
@@ -61,7 +63,17 @@ def create_dag(dag_id, interval, config, search_type, searches):
                 config=config,
                 search_type=search_type,
                 search_id=search_id,
-                dag=dag)
+                dag=dag
+            )
+            for search_id in searches
+        ]
+
+        truncate_postgres_stage = [ 
+            PostgresOperator(
+                task_id=f'truncate_postgres_{search_id}',
+                postgres_conn_id=config.POSTGRES_CONN_ID,
+                sql=f'TRUNCATE TABLE {search_id}',
+            )
             for search_id in searches
         ]
 
@@ -69,10 +81,14 @@ def create_dag(dag_id, interval, config, search_type, searches):
             task_id='finishing_pipeline',
             python_callable=dummy_callable,
             op_kwargs={'action': 'finishing'},
-            dag=dag
         )
 
-        start >> load_netsuite_to_s3_landing >> finish
+        chain(
+            start,
+            load_netsuite_to_s3_landing,
+            truncate_postgres_stage,
+            finish
+        )
     
     return dag
 
