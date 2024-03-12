@@ -6,7 +6,8 @@ from airflow.utils.helpers import chain
 
 from dags_config import Config as config
 from custom_operators import (
-    NetSuiteToS3Operator
+    NetSuiteToS3Operator,
+    S3ToPostgresTransferOperator
 )
 
 def dummy_callable(action):
@@ -77,6 +78,19 @@ def create_dag(dag_id, interval, config, search_type, searches):
             for search_id in searches
         ]
 
+        load_s3_landing_to_postgres_stage = [ 
+            S3ToPostgresTransferOperator(
+                task_id=f'truncate_postgres_{search_id}',
+                aws_conn_id=config.S3_CONN_ID,
+                s3_key='netsuite_extracts_{{ ds_nodash }}.csv',
+                s3_bucket_name=config.LANDING_BUCKET,
+                postgres_conn_id=config.POSTGRES_CONN_ID,
+                postgres_table=search_id,
+                dag=dag
+            )
+            for search_id in searches
+        ]
+        
         finish = PythonOperator(
             task_id='finishing_pipeline',
             python_callable=dummy_callable,
@@ -87,6 +101,7 @@ def create_dag(dag_id, interval, config, search_type, searches):
             start,
             load_netsuite_to_s3_landing,
             truncate_postgres_stage,
+            load_s3_landing_to_postgres_stage,
             finish
         )
     

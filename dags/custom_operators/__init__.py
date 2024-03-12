@@ -1,1 +1,2 @@
 from custom_operators.netsuite_to_s3_operator import NetSuiteToS3Operator
+from custom_operators.s3_to_postgres_transfer_operator import S3ToPostgresTransferOperator

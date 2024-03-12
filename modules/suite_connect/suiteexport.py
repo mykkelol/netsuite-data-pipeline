@@ -17,14 +17,14 @@ class SuiteExport:
             aws_conn_id=self.conn_id
         )
 
-    def flatten(self, d, parent_key='', delimiter='_'):
+    def flatten(self, d, parent_key='', sep='_'):
         items = []
         for k, v in d.items():
-            new_key = f"{parent_key}{delimiter}{k}" if parent_key else k
+            new_key = f"{parent_key}{sep}{k}" if parent_key else k
             if isinstance(v, dict):
                 items.extend(
                     self.flatten(
-                        v, new_key, delimiter=delimiter
+                        v, new_key, sep=sep
                     ).items()
                 )
             else:
