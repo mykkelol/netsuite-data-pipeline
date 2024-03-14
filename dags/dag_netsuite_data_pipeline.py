@@ -80,7 +80,7 @@ def create_dag(dag_id, interval, config, search_type, searches):
 
         load_s3_landing_to_postgres_stage = [ 
             S3ToPostgresTransferOperator(
-                task_id=f'truncate_postgres_{search_id}',
+                task_id=f'load_to_postgres_stage_{search_id}',
                 aws_conn_id=config.S3_CONN_ID,
                 s3_key='netsuite_extracts_{{ ds_nodash }}.csv',
                 s3_bucket_name=config.LANDING_BUCKET,

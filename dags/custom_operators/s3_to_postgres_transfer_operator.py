@@ -39,7 +39,7 @@ class S3ToPostgresTransferOperator(BaseOperator):
         try:
             s3_hook = S3Hook(aws_conn_id=self.aws_conn_id)
             s3_data = s3_hook.read_key(self.s3_key, self.s3_bucket_name)
-            df = read_csv(StringIO(s3_data))
+            df = read_csv(StringIO(s3_data), quotechar='"')
 
             postgres_hook = PostgresHook(postgres_conn_id=self.postgres_conn_id)
             conn = postgres_hook.get_conn()
@@ -58,7 +58,6 @@ class S3ToPostgresTransferOperator(BaseOperator):
             finally:
                 cursor.close()
                 conn.close()
-
         except Exception as err:
-            print(err)
+            self.logger.error(err)
             raise err
