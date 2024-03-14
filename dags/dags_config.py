@@ -8,7 +8,7 @@ class Config:
     POSTGRES_CONN_ID = 'postgres_localhost'
 
     SUPPORTED_RECORD_TYPES = [
-        'transactions',
+        'transaction',
         'customer',
         'class',
         'department',
@@ -17,7 +17,7 @@ class Config:
     ]
 
     TRANSACTION_TYPES = {
-        'transactions': [
+        'transaction': [
             'customsearch_gl_posting_transactions_india',
         ]
     }

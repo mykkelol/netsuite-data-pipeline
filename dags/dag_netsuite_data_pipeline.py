@@ -17,33 +17,6 @@ def dummy_callable(action):
         f'NetSuite GL posting transactions data pipeline'
     )
 
-def extract_netsuite_results(
-        config,
-        search_type,
-        search_id,
-        dag,
-    ):
-    return NetSuiteToS3Operator(
-        task_id=f'extract_{search_id}',
-        search_types=config.SUPPORTED_RECORD_TYPES,
-        search_type=search_type,
-        search_id=search_id,
-        conn_id=config.S3_CONN_ID,
-        bucket_name=config.LANDING_BUCKET,
-        filename='netsuite_extracts_{{ ds_nodash }}',
-        filter_expression=[
-            ['taxline','is','F'], 
-            'AND', 
-            ['cogs','is','F'], 
-            'AND', 
-            ['posting','is','T'], 
-            'AND', 
-            ['accountingbook','anyof',config.ACCOUNTING_BOOKS['secondary']]
-        ],
-        columns=None,
-        dag=dag
-    )
-
 def create_dag(dag_id, interval, config, search_type, searches):
     with DAG(
         dag_id=dag_id,
@@ -61,10 +34,24 @@ def create_dag(dag_id, interval, config, search_type, searches):
         )
 
         load_netsuite_to_s3_landing = [
-            extract_netsuite_results(
-                config=config,
+            NetSuiteToS3Operator(
+                task_id=f'extract_{search_id}',
+                search_types=config.SUPPORTED_RECORD_TYPES,
                 search_type=search_type,
                 search_id=search_id,
+                conn_id=config.S3_CONN_ID,
+                bucket_name=config.LANDING_BUCKET,
+                filename='netsuite_extracts_{{ ds_nodash }}',
+                filter_expression=[
+                    ['taxline','is','F'], 
+                    'AND', 
+                    ['cogs','is','F'], 
+                    'AND', 
+                    ['posting','is','T'], 
+                    'AND', 
+                    ['accountingbook','anyof',config.ACCOUNTING_BOOKS['secondary']]
+                ],
+                columns=None,
                 dag=dag
             )
             for search_id in searches
