@@ -43,5 +43,4 @@ class Config:
     S3_CONN_ID = "minio_conn"
 
     LANDING_BUCKET = 'finance-data-lake-landing'
-    STAGING_BUCKET = 'finance-data-lake-staging'
-    FINAL_BUCKET = 'finance-data-lake-final'
+    LAKE_BUCKET = 'finance-data-lake'

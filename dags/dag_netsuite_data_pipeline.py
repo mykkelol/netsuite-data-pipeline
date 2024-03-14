@@ -1,8 +1,9 @@
 from datetime import datetime
 from airflow import DAG
+from airflow.utils.helpers import chain
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
-from airflow.utils.helpers import chain
+from airflow.providers.amazon.aws.operators.s3 import S3CopyObjectOperator, S3DeleteObjectsOperator
 
 from dags_config import Config as config
 from custom_operators import (
@@ -69,24 +70,64 @@ def create_dag(dag_id, interval, config, search_type, searches):
             for search_id in searches
         ]
 
-        truncate_postgres_stage = [ 
+        truncate_postgres_staging = [ 
             PostgresOperator(
                 task_id=f'truncate_postgres_{search_id}',
                 postgres_conn_id=config.POSTGRES_CONN_ID,
-                sql=f'TRUNCATE TABLE {search_id}',
+                sql=f'TRUNCATE TABLE stage_{search_id}',
             )
             for search_id in searches
         ]
 
-        load_s3_landing_to_postgres_stage = [ 
+        load_s3_landing_to_postgres_staging = [ 
             S3ToPostgresTransferOperator(
                 task_id=f'load_to_postgres_stage_{search_id}',
                 aws_conn_id=config.S3_CONN_ID,
                 s3_key='netsuite_extracts_{{ ds_nodash }}.csv',
                 s3_bucket_name=config.LANDING_BUCKET,
                 postgres_conn_id=config.POSTGRES_CONN_ID,
-                postgres_table=search_id,
+                postgres_table=f'stage_{search_id}',
                 dag=dag
+            )
+            for search_id in searches
+        ]
+
+        load_postgres_staging_to_final = [
+            PostgresOperator(
+                task_id=f'load_postgres_final_{search_id}',
+                postgres_conn_id=config.POSTGRES_CONN_ID,
+                sql=f"""
+                    INSERT INTO final_{search_id}
+                    SELECT *
+                    FROM stage_{search_id} AS stage
+                    WHERE stage.id IS NOT NULL AND NOT EXISTS (
+                        SELECT 1
+                        FROM final_{search_id} AS final
+                        WHERE final.id = stage.id
+                    )
+                """
+            )
+            for search_id in searches
+        ]
+
+        load_s3_landing_to_lake = [
+            S3CopyObjectOperator(
+                task_id=f'load_s3_lake_{search_id}',
+                aws_conn_id=config.S3_CONN_ID,
+                source_bucket_key='S3://%s/netsuite_extracts_{{ ds_nodash }}.csv' % config.LANDING_BUCKET,
+                dest_bucket_key='S3://%s/netsuite_extracts_{{ ds_nodash }}.csv' % config.LAKE_BUCKET,
+                dag=dag,
+            )
+            for search_id in searches
+        ]
+
+        delete_s3_landing = [
+            S3DeleteObjectsOperator(
+                task_id=f'delete_s3_landing_{search_id}',
+                aws_conn_id=config.S3_CONN_ID,
+                bucket=config.LANDING_BUCKET,
+                keys='netsuite_extracts_{{ ds_nodash }}.csv',
+                dag=dag,
             )
             for search_id in searches
         ]
@@ -96,15 +137,18 @@ def create_dag(dag_id, interval, config, search_type, searches):
             python_callable=dummy_callable,
             op_kwargs={'action': 'finishing'},
         )
-
+        
         chain(
             start,
             load_netsuite_to_s3_landing,
-            truncate_postgres_stage,
-            load_s3_landing_to_postgres_stage,
+            truncate_postgres_staging,
+            load_s3_landing_to_postgres_staging,
+            load_postgres_staging_to_final,
+            load_s3_landing_to_lake,
+            delete_s3_landing,
             finish
         )
-    
+            
     return dag
 
 if len(config.TRANSACTION_TYPES) > 5:
