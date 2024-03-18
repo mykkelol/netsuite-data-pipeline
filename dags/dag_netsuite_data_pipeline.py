@@ -1,6 +1,5 @@
 from datetime import datetime
 from airflow import DAG
-from airflow.utils.helpers import chain
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.amazon.aws.operators.s3 import S3CopyObjectOperator, S3DeleteObjectsOperator
@@ -17,7 +16,7 @@ def dummy_callable(action):
         f'NetSuite GL posting transactions data pipeline'
     )
 
-def create_bucket_key(base = 'netsuite_extracts', extension = '.csv'):
+def get_bucket_key(base = 'netsuite_extracts', extension = '.csv'):
     return f'{base}_{{{{ ds_nodash }}}}{extension}'
 
 def create_dag(
@@ -26,7 +25,8 @@ def create_dag(
     config,
     search_type,
     search_id,
-    filter
+    filter,
+    subsearches
 ):
     with DAG(
         dag_id=dag_id,
@@ -45,56 +45,66 @@ def create_dag(
             dag=dag
         )
 
-        load_netsuite_to_s3_landing = NetSuiteToS3Operator(
-            task_id=f'extract_{search_id}',
-            search_types=config.SUPPORTED_RECORD_TYPES,
-            search_type=search_type,
-            search_id=search_id,
-            conn_id=config.S3_CONN_ID,
-            bucket_name=config.LANDING_BUCKET,
-            filename=create_bucket_key(extension=''),
-            filter_expression=filter,
-            columns=None,
-            dag=dag
-        )
+        load_netsuite_to_s3_landing = [
+            NetSuiteToS3Operator(
+                task_id=f'extract_{type}',
+                search_types=config.SUPPORTED_RECORD_TYPES,
+                search_type=type,
+                search_id=id,
+                conn_id=config.S3_CONN_ID,
+                bucket_name=config.LANDING_BUCKET,
+                filename=get_bucket_key(extension=''),
+                filter_expression=filter if i == 0 else subfilter,
+                columns=None,
+                dag=dag
+            ) for i, (type, id, subfilter) in enumerate(subsearches)
+        ]
 
         truncate_postgres_staging = PostgresOperator(
-            task_id=f'truncate_postgres_{search_id}',
+            task_id=f'truncate_postgres_tables',
             postgres_conn_id=config.POSTGRES_CONN_ID,
             sql='truncate_postgres_staging.sql',
             params={'table_id': f'stage_{search_id}'}
         )
 
-        load_s3_landing_to_postgres_staging = S3ToPostgresTransferOperator(
-            task_id=f'load_to_postgres_stage_{search_id}',
-            aws_conn_id=config.S3_CONN_ID,
-            s3_key=create_bucket_key(extension='.csv'),
-            s3_bucket_name=config.LANDING_BUCKET,
-            postgres_conn_id=config.POSTGRES_CONN_ID,
-            postgres_table=f'stage_{search_id}',
-            dag=dag
-        )
+        load_s3_landing_to_postgres_staging = [
+            S3ToPostgresTransferOperator(
+                task_id=f'load_to_postgres_stage_{type}',
+                aws_conn_id=config.S3_CONN_ID,
+                s3_key=get_bucket_key(extension='.csv'),
+                s3_bucket_name=config.LANDING_BUCKET,
+                postgres_conn_id=config.POSTGRES_CONN_ID,
+                postgres_table=f'stage_{id}',
+                dag=dag
+            ) for (type, id, subfilter) in subsearches
+        ]
 
         load_postgres_staging_to_final = PostgresOperator(
-            task_id=f'load_postgres_final_{search_id}',
+            task_id=f'load_postgres_final_{search_type}',
             postgres_conn_id=config.POSTGRES_CONN_ID,
             sql='load_postgres_staging_to_final.sql',
             params={'search_id': search_id}
         )
 
+        transform_postgres_final = PythonOperator(
+            task_id='transform_pipeline',
+            python_callable=dummy_callable,
+            op_kwargs={'action': 'transforming'},
+        )
+
         load_s3_landing_to_lake = S3CopyObjectOperator(
-            task_id=f'load_s3_lake_{search_id}',
+            task_id=f'load_s3_lake_{search_type}',
             aws_conn_id=config.S3_CONN_ID,
-            source_bucket_key=f'S3://{config.LANDING_BUCKET}/{create_bucket_key()}',
-            dest_bucket_key=f'S3://{config.LAKE_BUCKET}/{create_bucket_key()}',
+            source_bucket_key=f'S3://{config.LANDING_BUCKET}/{get_bucket_key()}',
+            dest_bucket_key=f'S3://{config.LAKE_BUCKET}/{get_bucket_key()}',
             dag=dag,
         )
 
         delete_s3_landing = S3DeleteObjectsOperator(
-            task_id=f'delete_s3_landing_{search_id}',
+            task_id=f'delete_s3_landing_{search_type}',
             aws_conn_id=config.S3_CONN_ID,
             bucket=config.LANDING_BUCKET,
-            keys=create_bucket_key(extension='.csv'),
+            keys=get_bucket_key(extension='.csv'),
             dag=dag,
         )
         
@@ -109,9 +119,10 @@ def create_dag(
             >> load_netsuite_to_s3_landing
             >> truncate_postgres_staging
             >> load_s3_landing_to_postgres_staging
+            >> load_postgres_staging_to_final
             >> [
-                load_postgres_staging_to_final,
-                load_s3_landing_to_lake
+                transform_postgres_final,
+                load_s3_landing_to_lake,
             ]
             >> delete_s3_landing
             >> finish
@@ -125,9 +136,11 @@ if len(config.RECORD_TYPES) > 5:
 for i, type in enumerate(config.RECORD_TYPES):
     search_type = type['type']
     search_id = type.get('search_id')
-    filter = type.get('filter_expression')
+    subsearches = type.get('subsearches')
+    filter = type.get('filter')
+
     dag_id = f'netsuite_data_pipeline_{search_type}'
-    interval = f'{str(i * 10)} * * * *'
+    interval = f'{str(i * 5)} * * * *'
 
     globals()[dag_id] = create_dag(
         dag_id,
@@ -135,5 +148,6 @@ for i, type in enumerate(config.RECORD_TYPES):
         config,
         search_type,
         search_id,
-        filter
+        filter,
+        subsearches
     )

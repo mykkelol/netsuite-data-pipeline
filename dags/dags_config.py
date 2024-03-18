@@ -24,7 +24,7 @@ class Config:
         {
             'type': 'transaction',
             'search_id': 'customsearch_gl_posting_transactions_india',
-            'filter_expression': [
+            'filter': [
                 ['taxline','is','F'], 
                 'AND', 
                 ['cogs','is','F'], 
@@ -32,6 +32,15 @@ class Config:
                 ['posting','is','T'], 
                 'AND', 
                 ['accountingbook','anyof', ACCOUNTING_BOOKS['secondary']]
+            ],
+            'subsearches': [
+                ('transaction', 'customsearch_gl_posting_transactions_india', []),
+                ('vendor', 'customsearch_vendor', []),
+                ('customer', 'customsearch_customer', []),
+                ('class', 'customsearch_class', []),
+                ('department', 'customsearch_department', []),
+                ('subsidiary', 'customsearch_subsidiary', []),
+                ('currency', 'customsearch_currency', []),
             ]
         }
     ]
