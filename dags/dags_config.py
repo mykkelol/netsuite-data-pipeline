@@ -36,21 +36,18 @@ class Config:
         }
     ]
 
-    S3_CONFIG = {
-        'host': 'host.docker.internal',
-        'port': '5432',
-        'db': 0
-    }
-
     S3_CONN_ID = 'minio_conn'
-
+    S3_CONFIG = {
+        'host': 'http://host.docker.internal',
+        'port': '9000',
+    }
+    
     LANDING_BUCKET = 'finance-data-lake-landing'
     LAKE_BUCKET = 'finance-data-lake'
 
+    POSTGRES_CONN_ID = 'postgres_localhost'
     POSTGRES_CONFIG = {
         'host': 'host.docker.internal',
         'port': '5432',
         'db': 'finance'
     }
-
-    POSTGRES_CONN_ID = 'postgres_localhost'
