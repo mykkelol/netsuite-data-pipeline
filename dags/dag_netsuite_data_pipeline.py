@@ -22,14 +22,16 @@ def create_dag(
     interval,
     config,
     search_type,
-    search_id
+    search_id,
+    filter
 ):
     with DAG(
         dag_id=dag_id,
         description=f'Ingested new GL posting {search_type} from NetSuite',
         schedule_interval=interval,
         start_date=datetime(2024, 2, 25, 2),
-        catchup=False
+        catchup=False,
+        template_searchpath='sql'
     ) as dag:
         
         start = PythonOperator(
@@ -47,15 +49,7 @@ def create_dag(
             conn_id=config.S3_CONN_ID,
             bucket_name=config.LANDING_BUCKET,
             filename='netsuite_extracts_{{ ds_nodash }}',
-            filter_expression=[
-                ['taxline','is','F'], 
-                'AND', 
-                ['cogs','is','F'], 
-                'AND', 
-                ['posting','is','T'], 
-                'AND', 
-                ['accountingbook','anyof',config.ACCOUNTING_BOOKS['secondary']]
-            ],
+            filter_expression=filter,
             columns=None,
             dag=dag
         )
@@ -63,7 +57,8 @@ def create_dag(
         truncate_postgres_staging = PostgresOperator(
             task_id=f'truncate_postgres_{search_id}',
             postgres_conn_id=config.POSTGRES_CONN_ID,
-            sql=f'TRUNCATE TABLE stage_{search_id}',
+            sql='truncate_postgres_staging.sql',
+            params={'table_id': f'stage_{search_id}'}
         )
 
         load_s3_landing_to_postgres_staging = S3ToPostgresTransferOperator(
@@ -79,16 +74,8 @@ def create_dag(
         load_postgres_staging_to_final = PostgresOperator(
             task_id=f'load_postgres_final_{search_id}',
             postgres_conn_id=config.POSTGRES_CONN_ID,
-            sql=f"""
-                INSERT INTO final_{search_id}
-                SELECT *
-                FROM stage_{search_id} AS stage
-                WHERE stage.id IS NOT NULL AND NOT EXISTS (
-                    SELECT 1
-                    FROM final_{search_id} AS final
-                    WHERE final.id = stage.id
-                )
-            """
+            sql='load_postgres_staging_to_final.sql',
+            params={'search_id: {search_id}'}
         )
 
         load_s3_landing_to_lake = S3CopyObjectOperator(
@@ -134,6 +121,7 @@ if len(config.RECORD_TYPES) > 5:
 for i, type in enumerate(config.RECORD_TYPES):
     search_type = type['type']
     search_id = type.get('search_id')
+    filter = type.get('filter_expression')
     dag_id = f'netsuite_data_pipeline_{search_type}'
     interval = f'{str(i * 10)} * * * *'
 
@@ -142,5 +130,6 @@ for i, type in enumerate(config.RECORD_TYPES):
         interval,
         config,
         search_type,
-        search_id
+        search_id,
+        filter
     )
