@@ -1,5 +1,6 @@
 import pandas as pd
 import logging
+import re
 
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -16,10 +17,15 @@ def transform_staged_data(postgres_conn_id, postgres_table):
         logging.info(f'No rows to transform. Finishing task.')
         return False
     
-    errors = []
-    df['department'] = df['department'].apply(lambda x: x.split(' ', 1)[1] if x else x)
-    df['status'] = df['status'].apply(lambda x: 'Approved' if not x or x.strip() == '' else x)
+    df['department'] = df['department'].apply(
+        lambda x: re.sub(r'^\d+\s', '', x) if isinstance(x, str) else x
+    )
 
+    df['status'] = df['status'].apply(
+        lambda x: 'Approved' if not x or x.strip() == '' else x
+    )
+
+    errors = []
     with engine.begin() as conn:
         for _, row in df.iterrows():
             try:
