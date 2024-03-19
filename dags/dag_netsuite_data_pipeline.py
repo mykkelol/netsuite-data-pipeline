@@ -5,6 +5,7 @@ from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.amazon.aws.operators.s3 import S3CopyObjectOperator, S3DeleteObjectsOperator
 
 from dags_config import Config as config
+from transformation import transform_staged_data
 from custom_operators import (
     NetSuiteToS3Operator,
     S3ToPostgresTransferOperator
@@ -79,17 +80,21 @@ def create_dag(
             ) for (type, id, subfilter) in subsearches
         ]
 
+        transform_postgres_staging = PythonOperator(
+            task_id=f'transform_postgres_staging',
+            python_callable=transform_staged_data,
+            dag=dag,
+            op_kwargs={
+                'postgres_conn_id': config.POSTGRES_CONN_ID,
+                'postgres_table': f'stage_{search_id}',
+            }
+        )
+
         load_postgres_staging_to_final = PostgresOperator(
             task_id=f'load_postgres_final_{search_type}',
             postgres_conn_id=config.POSTGRES_CONN_ID,
             sql='load_postgres_staging_to_final.sql',
             params={'search_id': search_id}
-        )
-
-        transform_postgres_final = PythonOperator(
-            task_id='transform_pipeline',
-            python_callable=dummy_callable,
-            op_kwargs={'action': 'transforming'},
         )
 
         load_s3_landing_to_lake = S3CopyObjectOperator(
@@ -119,9 +124,9 @@ def create_dag(
             >> load_netsuite_to_s3_landing
             >> truncate_postgres_staging
             >> load_s3_landing_to_postgres_staging
-            >> load_postgres_staging_to_final
+            >> transform_postgres_staging
             >> [
-                transform_postgres_final,
+                load_postgres_staging_to_final,
                 load_s3_landing_to_lake,
             ]
             >> delete_s3_landing
