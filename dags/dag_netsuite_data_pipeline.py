@@ -1,5 +1,6 @@
 from datetime import datetime
 from airflow import DAG
+from airflow.utils.task_group import TaskGroup
 from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.amazon.aws.operators.s3 import S3CopyObjectOperator, S3DeleteObjectsOperator
@@ -22,6 +23,7 @@ def get_bucket_key(base = 'netsuite_extracts', extension = '.csv'):
 
 def create_dag(
     dag_id,
+    description,
     interval,
     config,
     search_type,
@@ -31,7 +33,7 @@ def create_dag(
 ):
     with DAG(
         dag_id=dag_id,
-        description=f'Ingested new GL posting {search_type} from NetSuite',
+        description=description,
         default_view="graph",
         schedule_interval=interval,
         start_date=datetime(2024, 2, 25, 2),
@@ -145,10 +147,12 @@ for i, type in enumerate(config.RECORD_TYPES):
     filter = type.get('filter')
 
     dag_id = f'netsuite_data_pipeline_{search_type}'
+    description = f'Data Pipeline for NetSuite {search_type}'
     interval = f'{str(i * 5)} * * * *'
 
     globals()[dag_id] = create_dag(
         dag_id,
+        description,
         interval,
         config,
         search_type,
