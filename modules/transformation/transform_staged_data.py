@@ -5,6 +5,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+
 from log import log
 
 def get_sql_path(subfix):
