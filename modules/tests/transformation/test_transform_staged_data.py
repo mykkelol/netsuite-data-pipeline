@@ -3,8 +3,7 @@ import pandas as pd
 from pandas.testing import assert_frame_equal
 from unittest.mock import patch, MagicMock
 from sqlalchemy.exc import SQLAlchemyError
-
-from ..fixtures import transform_staged_data
+from transformation import transform_staged_data
 
 class TestTransformStagedData(unittest.TestCase):
     def setUp(self):
@@ -14,10 +13,10 @@ class TestTransformStagedData(unittest.TestCase):
             'status': ['Pending', 'Rejected', None]
         })
 
-    @patch('transform_staged_data.PostgresHook')
-    @patch('transform_staged_data.create_engine')
-    @patch('transform_staged_data.pd.read_sql')
-    @patch('transform_staged_data.open')
+    @patch('airflow.providers.postgres.hooks.postgres.PostgresHook')
+    @patch('sqlalchemy.create_engine')
+    @patch('pandas.read_sql')
+    @patch('builtins.open')
     def test_transform_staged_data(
         self, mock_open, mock_read_sql, mock_create_engine, mock_postgres_hook
     ):
@@ -31,7 +30,7 @@ class TestTransformStagedData(unittest.TestCase):
         mock_open.return_value.__enter__.return_value = mock_file
         mock_postgres_hook.return_value.get_uri.return_value = 'postgresql://username:password@localhost:5432/mydatabase'
         
-        result = transform_staged_data.transform_staged_data('my_conn_id', 'my_table')
+        result = transform_staged_data('my_conn_id', 'my_table')
         
         self.assertTrue(result)
         
