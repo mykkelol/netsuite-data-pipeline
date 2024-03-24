@@ -1,0 +1,13 @@
+langugage: python
+python:
+  - '3.9'
+
+services:
+  - docker
+
+before_script:
+  - pip install docker-compose
+
+branches:
+  only:
+    - main
