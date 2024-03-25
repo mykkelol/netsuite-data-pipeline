@@ -1,6 +1,6 @@
 # Finance Data Pipeline
 
-[![Build Status](https://travis-ci.com/mykkelol/netsuite-data-pipeline.svg?&branch=main)](https://travis-ci.org/mykkelol/netsuite-data-pipeline) [![Coverage Status](https://coveralls.io/repos/github/mykkelol/netsuite-data-pipeline/badge.svg?branch=main)](https://coveralls.io/github/mykkelol/netsuite-data-pipeline?branch=main) [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/) [![SuiteScript 2.1](https://img.shields.io/badge/suitescript-2.1-blue.svg)](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_156042690639.html#SuiteScript-2.1) [![License](https://img.shields.io/badge/License-apache-orange.svg)](./LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-green.svg)](https://travis-ci.org/mykkelol/netsuite-data-pipeline) [![Coverage Status](https://img.shields.io/badge/coverage-100%-green.svg)](https://coveralls.io/github/mykkelol/netsuite-data-pipeline?branch=main) [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/) [![SuiteScript 2.1](https://img.shields.io/badge/suitescript-2.1-blue.svg)](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_156042690639.html#SuiteScript-2.1) [![License](https://img.shields.io/badge/License-apache-orange.svg)](./LICENSE)
 
 **Finance Data Pipeline** is a purpose-built automated data pipeline to help Finance and Accounting teams comply to evolving accounting standards and regulations without additional manual intervention. The pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
 
@@ -69,7 +69,7 @@ docker-compose up -d
 
 ```sql
 CREATE TABLE IF NOT EXISTS my_table_name (
-	id VARCHAR(255),
+    id VARCHAR(255),
 	duedate DATE,
 	trandate DATE,
 	amount DECIMAL,
@@ -94,10 +94,19 @@ In [dags_config.py](./dags/dags_config.py), `RECORD_TYPE`/`search_id` is require
 
 ![DAG Primary Search](./images/dag_primary_search.png)
 
-Optionally, set-up `subsearches` property in [dags_config.py](./dags/dags_config.py) to configure the DAG to automatically create multiple task instances dynamically, group dynamically-created tasks, and run them in parallel with Airflow pool to optimize and enrich the data pipeline.
+Optionally, set-up `subsearches` property by adding a tuple of (`record_type`, `search_id`, `filters`) in [dags_config.py](./dags/dags_config.py) to configure the DAG to automatically create multiple task instances dynamically and group them to run in parallel with Airflow pool to optimize and enrich the data pipeline.
 
-```python3
-pass
+```python
+{
+    'type': 'transaction',
+    'search_id': 'search_id',
+    'subsearches': [
+        ('transaction', 'customsearch_gl_posting_transactions_india', []),
+        ('customer', 'customsearch_customer', []),
+        ('currency', 'customsearch_currency', []),
+        ('some_record_types', 'custom_searchid', []),
+    ]
+}
 ```
 
 # License
