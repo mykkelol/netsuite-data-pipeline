@@ -1,20 +1,18 @@
-[![Build Status](https://travis-ci.com/mykkelol/netsuite-data-pipeline.svg?&branch=main)](https://travis-ci.org/mykkelol/netsuite-data-pipeline) [![Coverage Status](https://coveralls.io/repos/github/mykkelol/netsuite-data-pipeline/badge.svg?branch=main)](https://coveralls.io/github/mykkelol/netsuite-data-pipeline?branch=main) [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
-
 # Finance Data Pipeline
 
-**Finance Data Pipeline** is a purpose-built automated data pipeline to help Finance and Accounting teams adhere to evolving accounting standards, compliance, and regulations without additional manual intervention. The pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
+[![Build Status](https://travis-ci.com/mykkelol/netsuite-data-pipeline.svg?&branch=main)](https://travis-ci.org/mykkelol/netsuite-data-pipeline) [![Coverage Status](https://coveralls.io/repos/github/mykkelol/netsuite-data-pipeline/badge.svg?branch=main)](https://coveralls.io/github/mykkelol/netsuite-data-pipeline?branch=main) [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/) [![SuiteScript 2.1](https://img.shields.io/badge/suitescript-2.1-blue.svg)](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_156042690639.html#SuiteScript-2.1) [![License](https://img.shields.io/badge/License-apache-orange.svg)](./LICENSE)
 
-- **ERP**: [NetSuite](https://www.netsuite.com/)
-- **ERP API**: [SuiteScript](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4387799403.html#SuiteScript-2.x-RESTlet-Script-Type)
+**Finance Data Pipeline** is a purpose-built automated data pipeline to help Finance and Accounting teams comply to evolving accounting standards and regulations without additional manual intervention. The pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
+
+- **ERP**: [NetSuite](https://www.netsuite.com/), [SuiteScript](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4387799403.html#SuiteScript-2.x-RESTlet-Script-Type)
 - **Orchestrator**: [Airflow](https://airflow.apache.org/)
-- **Database**: [Postgres](https://www.postgresql.org/)
-- **Datalake**: [AWS S3](https://aws.amazon.com/s3/)
+- **Data storage**: [Postgres](https://www.postgresql.org/), [AWS S3](https://aws.amazon.com/s3/)
 - **Analytics**: [Tableau](https://help.tableau.com/current/pro/desktop/en-us/examples_postgresql.htm), [Mode](https://mode.com/integrations/postgresql), [Adaptive Planning](https://hightouch.com/integrations/postgresql-to-workday-adaptive-planning)
-- **Internal Tool**: [Retool](https://retool.com/)
+- **Internal Tool**: [Retool](https://docs.retool.com/data-sources/quickstarts/database/postgresql)
 
 # Problem
 
-In 2023, India Ministry of Corporate Affairs (MCA) issued a mandate obligating daily backups of all financial data and related documents (:point_right: see [MCA Notification 21st August 2022](https://resource.cdn.icai.org/71244clcgc160822.pdf)). In short, subsidiaries or legal entities operating in India—including those headquartered in the US but with branches in India—are obligated to maintain daily backups of financial data on servers physically located within India.
+In 2023, India Ministry of Corporate Affairs (MCA) issued a mandate obligating daily backups of all financial data and related documents (👉 see [MCA Notification 21st August 2022](https://resource.cdn.icai.org/71244clcgc160822.pdf)). In short, subsidiaries or legal entities operating in India—including those headquartered in the US but with branches in India—are obligated to maintain daily backups of financial data on servers physically located within India.
 
 # Architecture
 
@@ -30,12 +28,85 @@ The Finance Data Pipeline facilitates Finance and Accounting teams' compliance r
 
 Data engineers interested in this project must have knowledge of NetSuite, SuiteScript, Accounting, and REST APIs to effectively operate the custom Airflow's NetSuite operators.
 
-# Running locally
+# Running Locally
+
+### Step 1: Create NetSuite API
+
+Create a SuiteScript 2.1+ RESTlet script to deploy a custom NetSuite REST API, retrieve its `script_id`, and store in `.env` file similar to [.env.example](./.env.example) or in Airflow UI through `Admin`/`Variables` and `Admin`/`Connections`
+
+```JavaScript
+define(['N/search'], function (search) {
+    return onRequest: (c) => {
+        const { type, id, filters, columns } = c;
+        return search.create({
+            type
+            id,
+            filters,
+            columns
+        })
+        .run()
+        .getRange(start, end)
+        .map(rows => rows.getValue())
+        .reduce((rows, row) => {
+            return rows;
+        }, results: [])
+    }
+})
+```
+
+### Step 2: Build Airflow project
+
+```bash
+git clone https://github.com/mykkelol/netsuite-data-pipeline
+cd netsuite-data-pipeline
+python3 -m pip install docker
+python3 -m pip install docker-compose
+docker build -t extending-airflow:latest .
+docker-compose up -d
+```
+
+### Step 3: Create tables in SQL severs
+
+```sql
+CREATE TABLE IF NOT EXISTS my_table_name (
+	id VARCHAR(255),
+	duedate DATE,
+	trandate DATE,
+	amount DECIMAL,
+	tranid VARCHAR(255),
+	entity VARCHAR(255),
+	status VARCHAR(255),
+	currency VARCHAR(255),
+	department VARCHAR(255),
+	record_type VARCHAR(255),
+	requester_name VARCHAR(255),
+	requester_email VARCHAR(255),
+	nextapprover_name VARCHAR(255),
+	nextapprover_email VARCHAR(255),
+	transaction_number VARCHAR(255),
+	PRIMARY KEY(id)
+)
+```
+
+### Step 4: Configure DAG
+
+In [dags_config.py](./dags/dags_config.py), `RECORD_TYPE`/`search_id` is required to run the DAG. In the DAG below, the highlighted tasks represents the single `transaction` element required in `RECORD_TYPE` and `search_id`.
+
+![DAG Primary Search](./images/dag_primary_search.png)
+
+Optionally, set-up `subsearches` property in [dags_config.py](./dags/dags_config.py) to configure the DAG to automatically create multiple task instances dynamically, group dynamically-created tasks, and run them in parallel with Airflow pool to optimize and enrich the data pipeline.
+
+```python3
+pass
+```
 
 # License
 
-- You are free to fork and use this code directly according to the Apache License (:point_right: see [LICENSE](./LICENSE)).
+- You are free to fork and use this code directly according to the Apache License (👉 see [LICENSE](./LICENSE)).
 - Please do not copy it directly.
 - Crediting the author is appreciated.
 
 # Contact
+
+- Github [@mykkelol](https://github.com/mykkelol)
+- LinkedIn [/msihavong](https://linkedin.com/in/msihavong)
