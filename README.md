@@ -24,7 +24,7 @@ In 2023, India Ministry of Corporate Affairs (MCA) mandated all enterprises oper
 2. **Load data** into SQL warehouse and India-hosted S3 lake
 3. **Transform data** to structured, audit-ready, and reportable data, empowering Finance and Accounting teams to consume the Financial data directly in analytics tools like Mode, Tableau, Adaptive, and Pigment, as well as custom reconciliation tools such as Retool and Superblocks.
 
-Data engineers interested in this project must have knowledge of NetSuite, SuiteScript, Accounting, and REST APIs to effectively operate the custom Airflow's NetSuite operators.
+Data engineers interested in this project must have knowledge of NetSuite, SuiteScript 2.1+, Accounting, and REST APIs to effectively operate the custom Airflow's NetSuite operators.
 
 # Running Locally
 
