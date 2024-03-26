@@ -1,8 +1,10 @@
 # Finance Data Pipeline
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://travis-ci.org/mykkelol/netsuite-data-pipeline) [![Coverage Status](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://coveralls.io/github/mykkelol/netsuite-data-pipeline?branch=main) [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/) [![SuiteScript 2.1](https://img.shields.io/badge/suitescript-2.1-blue.svg)](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_156042690639.html#SuiteScript-2.1) [![License](https://img.shields.io/badge/License-apache-orange.svg)](./LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://travis-ci.org/mykkelol/netsuite-data-pipeline) [![Coverage Status](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)](https://coveralls.io/github/mykkelol/netsuite-data-pipeline?branch=main) [![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/) [![SuiteScript 2.1](https://img.shields.io/badge/suitescript-2.1-blue.svg)](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_156042690639.html#SuiteScript-2.1) [![License](https://img.shields.io/badge/License-apache-fuchsia.svg)](./LICENSE)
 
-**Finance Data Pipeline** is a purpose-built automated data pipeline to help Finance and Accounting teams comply to evolving accounting standards and regulations without additional manual intervention. The pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
+In 2023, India Ministry of Corporate Affairs (MCA) mandated all enterprises operating in India—including US-based companies with branches in India—to maintain daily backups of all financial data and related documents (👉 see [MCA Notification 21st August 2022](https://resource.cdn.icai.org/71244clcgc160822.pdf)). For many Finance teams, complying to this mandate is added burden of manual work and costly implementations.
+
+**Finance Data Pipeline** is a purpose-built automated data pipeline to help Finance teams comply with evolving accounting standards and regulations without increasing manual work. The data pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
 
 - **ERP**: [NetSuite](https://www.netsuite.com/), [SuiteScript](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4387799403.html#SuiteScript-2.x-RESTlet-Script-Type)
 - **Orchestrator**: [Airflow](https://airflow.apache.org/)
@@ -10,21 +12,17 @@
 - **Analytics**: [Tableau](https://help.tableau.com/current/pro/desktop/en-us/examples_postgresql.htm), [Mode](https://mode.com/integrations/postgresql), [Adaptive Planning](https://hightouch.com/integrations/postgresql-to-workday-adaptive-planning)
 - **Internal Tool**: [Retool](https://docs.retool.com/data-sources/quickstarts/database/postgresql)
 
-# Problem
-
-In 2023, India Ministry of Corporate Affairs (MCA) issued a mandate obligating daily backups of all financial data and related documents (👉 see [MCA Notification 21st August 2022](https://resource.cdn.icai.org/71244clcgc160822.pdf)). In short, subsidiaries or legal entities operating in India—including those headquartered in the US but with branches in India—are obligated to maintain daily backups of financial data on servers physically located within India.
-
 # Architecture
 
 ![Architecture](./images/architecture.png)
 
 # How it works
 
-The Finance Data Pipeline facilitates Finance and Accounting teams' compliance requirements without increasing manual work. It leverages Airflow, parallel programming, and an incremental load ELT architecture to automatically:
+**Finance Data Pipeline** facilitates Finance teams' compliance requirements without increasing manual work. It leverages Airflow, parallel programming, and an incremental load ELT architecture to automatically:
 
 1. **Extract data from NetSuite ERP** by executing a pool of DAG tasks hourly to call a custom NetSuite SuiteScript API to extract transactions and related metadata such as vendors, customers, employees, departments, files, etc. asynchronously and dynamically.
 2. **Load data** into SQL warehouse and India-hosted S3 lake
-3. **Transform data** to structured, auditable, and reportable data, empowering Finance and Accounting teams to consume the structured data directly in analytics tools like Mode, Tableau, Adaptive, and Pigment, as well as custom reconciliation tools such as Retool and Superblocks.
+3. **Transform data** to structured, audit-ready, and reportable data, empowering Finance and Accounting teams to consume the Financial data directly in analytics tools like Mode, Tableau, Adaptive, and Pigment, as well as custom reconciliation tools such as Retool and Superblocks.
 
 Data engineers interested in this project must have knowledge of NetSuite, SuiteScript, Accounting, and REST APIs to effectively operate the custom Airflow's NetSuite operators.
 
@@ -70,21 +68,21 @@ docker-compose up -d
 ```sql
 CREATE TABLE IF NOT EXISTS my_table_name (
     id VARCHAR(255),
-	duedate DATE,
-	trandate DATE,
-	amount DECIMAL,
-	tranid VARCHAR(255),
-	entity VARCHAR(255),
-	status VARCHAR(255),
-	currency VARCHAR(255),
-	department VARCHAR(255),
-	record_type VARCHAR(255),
-	requester_name VARCHAR(255),
-	requester_email VARCHAR(255),
-	nextapprover_name VARCHAR(255),
-	nextapprover_email VARCHAR(255),
-	transaction_number VARCHAR(255),
-	PRIMARY KEY(id)
+    duedate DATE,
+    trandate DATE,
+    amount DECIMAL,
+    tranid VARCHAR(255),
+    entity VARCHAR(255),
+    status VARCHAR(255),
+    currency VARCHAR(255),
+    department VARCHAR(255),
+    record_type VARCHAR(255),
+    requester_name VARCHAR(255),
+    requester_email VARCHAR(255),
+    nextapprover_name VARCHAR(255),
+    nextapprover_email VARCHAR(255),
+    transaction_number VARCHAR(255),
+    PRIMARY KEY(id)
 )
 ```
 
@@ -104,7 +102,7 @@ Optionally, set-up `subsearches` property by adding a tuple of (`record_type`, `
         ('transaction', 'customsearch_gl_posting_transactions_india', []),
         ('customer', 'customsearch_customer', []),
         ('currency', 'customsearch_currency', []),
-        ('some_record_types', 'custom_searchid', []),
+        ('some_record_type', 'customsearch_id', []),
     ]
 }
 ```
