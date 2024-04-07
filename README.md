@@ -4,7 +4,7 @@
 
 In 2023, India Ministry of Corporate Affairs (MCA) mandated all enterprises operating in India—including US-based companies with branches in India—to maintain daily backups of all financial data and related documents (👉 see [MCA Notification 21st August 2022](https://resource.cdn.icai.org/71244clcgc160822.pdf)). For many Finance teams, complying to this mandate is added burden of manual work and costly implementations.
 
-**Finance Data Pipeline** is a purpose-built automated data pipeline to help Finance teams comply with evolving accounting standards and regulations without increasing manual work. The data pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
+**Finance Data Pipeline** is a purpose-built data pipeline to help Finance teams comply with evolving accounting standards and regulations without increasing manual work by automatically orchestrating large volume of financial data across multiple systems. The data pipeline leverages parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
 
 - **ERP**: [NetSuite](https://www.netsuite.com/), [SuiteScript](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4387799403.html#SuiteScript-2.x-RESTlet-Script-Type)
 - **Orchestrator**: [Airflow](https://airflow.apache.org/)
@@ -21,10 +21,10 @@ In 2023, India Ministry of Corporate Affairs (MCA) mandated all enterprises oper
 **Finance Data Pipeline** facilitates Finance teams' compliance requirements without increasing manual work. It leverages Airflow, parallel programming, and an incremental load ELT architecture to automatically:
 
 1. **Extract data from NetSuite ERP** by executing a pool of DAG tasks hourly to call a custom NetSuite SuiteScript API to extract transactions and related metadata such as vendors, customers, employees, departments, files, etc. asynchronously and dynamically.
-2. **Load data** into SQL warehouse and India-hosted S3 lake
+2. **Load data** into SQL warehouse and India-hosted S3 lake.
 3. **Transform data** to structured, audit-ready, and reportable data, empowering Finance and Accounting teams to consume the Financial data directly in analytics tools like Mode, Tableau, Adaptive, and Pigment, as well as custom reconciliation tools such as Retool and Superblocks.
 
-Data engineers interested in this project must have knowledge of NetSuite, SuiteScript 2.1+, Accounting, and REST APIs to effectively operate the custom Airflow's NetSuite operators.
+Data engineers interested in this project must have knowledge of NetSuite, SuiteScript 2.1+, Accounting, and REST APIs to effectively operate the custom Airflow's NetSuite operators. The asynchronous and dynamic processing capability is available for both the pool of tasks and the DAG level (👉 see [Step 4: Configure DAG](#step-4-configure-dag)).
 
 # Running Locally
 
@@ -88,11 +88,11 @@ CREATE TABLE IF NOT EXISTS my_table_name (
 
 ### Step 4: Configure DAG
 
-In [dags_config.py](./dags/dags_config.py), `RECORD_TYPE`/`search_id` is required to run the DAG. In the DAG below, the highlighted tasks represents the single `transaction` element required in `RECORD_TYPE` and `search_id`.
+In [dags_config.py](./dags/dags_config.py), `RECORD_TYPE`/`search_id` is required to run the DAG. In the DAG below, the highlighted tasks represents the base `transaction` query required in `RECORD_TYPE` and `search_id`.
 
 ![DAG Primary Search](./images/dag_primary_search.png)
 
-Optionally, set-up `subsearches` property by adding a tuple of (`record_type`, `search_id`, `filters`) in [dags_config.py](./dags/dags_config.py) to configure the DAG to automatically create multiple task instances dynamically and group them to run in parallel with Airflow pool to optimize and enrich the data pipeline.
+Optionally, set-up `subsearches` property to add sub queries to support the base query by adding a tuple of (`record_type`, `search_id`, `filters`) in [dags_config.py](./dags/dags_config.py) to configure the DAG to automatically create multiple task instances dynamically and group them to run in parallel with Airflow pool to optimize and enrich the data pipeline.
 
 ```python
 {
@@ -105,6 +105,33 @@ Optionally, set-up `subsearches` property by adding a tuple of (`record_type`, `
         ('some_record_type', 'customsearch_id', []),
     ]
 }
+```
+
+To extend the pipeline even further to execute multiple DAGs dynamically and asynchronously, add additional base query dictionaries to `RECORD_TYPE`. Consider the following example, which involves a common scenario of a multi-subsidiary enterprise that operates with 2 subsidiaries (US, IN), then the pipeline can be configured to dynamically execute two DAGs for two base queries (or 2 subsidiaries) asychronously and within each DAG execution, dynamically and asyncronously run a pool of 4 tasks.
+
+```python
+[
+    {
+        'type': 'transaction',
+        'search_id': 'search_id_US',
+        'subsearches': [
+            ('transaction', 'customsearch_gl_posting_transactions_usa', []),
+            ('customer', 'customsearch_customer', []),
+            ('currency', 'customsearch_currency', []),
+            ('some_record_type', 'customsearch_id', []),
+        ]
+    },
+    {
+        'type': 'transaction',
+        'search_id': 'search_id_IN',
+        'subsearches': [
+            ('transaction', 'customsearch_gl_posting_transactions_india', []),
+            ('customer', 'customsearch_customer', []),
+            ('currency', 'customsearch_currency', []),
+            ('some_record_type', 'customsearch_id', []),
+        ]
+    }
+]
 ```
 
 # License
