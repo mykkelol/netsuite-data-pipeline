@@ -92,12 +92,12 @@ In [dags_config.py](./dags/dags_config.py), `RECORD_TYPE`/`search_id` is require
 
 ![DAG Primary Search](./images/dag_primary_search.png)
 
-Optionally, set-up `subsearches` property to add sub queries to support the base query by adding a tuple of (`record_type`, `search_id`, `filters`) in [dags_config.py](./dags/dags_config.py) to configure the DAG to automatically create multiple task instances dynamically and group them to run in parallel with Airflow pool to optimize and enrich the data pipeline.
+Optionally, leverage parallel programming and Airflow Task Group to optimize and enrich the data pipeline by configuring the `subsearches` property to add sub queries to support the base query. To do so, add tuples of (`record_type`, `search_id`, `filters`) to configure the DAG to run multiple task instances automatically, dynamically and asychronously.
 
 ```python
 {
     'type': 'transaction',
-    'search_id': 'search_id',
+    'search_id': 'search_id_india',
     'subsearches': [
         ('transaction', 'customsearch_gl_posting_transactions_india', []),
         ('customer', 'customsearch_customer', []),
@@ -107,32 +107,34 @@ Optionally, set-up `subsearches` property to add sub queries to support the base
 }
 ```
 
-To extend the pipeline even further to execute multiple DAGs dynamically and asynchronously, add additional base query dictionaries to `RECORD_TYPE`. Consider the following example, which involves a common scenario of a multi-subsidiary enterprise that operates with 2 subsidiaries (US, IN), then the pipeline can be configured to dynamically execute two DAGs for two base queries (or 2 subsidiaries) asychronously and within each DAG execution, dynamically and asyncronously run a pool of 4 tasks.
+Lastly, the pipeline can be extended even further to execute multiple DAGs dynamically and asynchronously. To do so, add additional base query dictionaries to `RECORD_TYPE`. Consider the following example, which involves a common scenario of a multi-subsidiary enterprise that operates with 2 subsidiaries (US, IN), then the pipeline can be configured to execute two DAGs for two base queries (or 2 subsidiaries).
 
 ```python
 [
     {
         'type': 'transaction',
-        'search_id': 'search_id_US',
+        'search_id': 'search_id_usa',
         'subsearches': [
             ('transaction', 'customsearch_gl_posting_transactions_usa', []),
-            ('customer', 'customsearch_customer', []),
-            ('currency', 'customsearch_currency', []),
             ('some_record_type', 'customsearch_id', []),
         ]
     },
     {
         'type': 'transaction',
-        'search_id': 'search_id_IN',
+        'search_id': 'search_id_india',
         'subsearches': [
             ('transaction', 'customsearch_gl_posting_transactions_india', []),
-            ('customer', 'customsearch_customer', []),
-            ('currency', 'customsearch_currency', []),
             ('some_record_type', 'customsearch_id', []),
         ]
     }
 ]
 ```
+
+# Who Uses Finance Data Pipeline
+
+Finance Data Pipeline is used by finance systems engineers in the developer community:
+
+![Developer Community](./images/logos.png)
 
 # License
 
