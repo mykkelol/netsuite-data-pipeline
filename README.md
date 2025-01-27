@@ -4,7 +4,7 @@
 
 **Finance Data Pipeline** is a purpose-built data pipeline to help Finance teams in complying with the 2023 mandate from the India Ministry of Corporate Affairs (👉 see [MCA Notification 21st August 2022](https://resource.cdn.icai.org/71244clcgc160822.pdf)) without increasing manual workload by automatically orchestrating large volume of financial data across multiple systems. 
 
-The mandate requires all enterprises operating in India, including branches of US-based companies, to maintain daily backups of financial data. The data pipeline helps Finance teams adhere to evolving accounting standards and regulations without increasing manual workload by leveraging parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
+The mandate requires all enterprises operating in India, including branches of US-based companies, to maintain daily backups of financial data. The data pipeline ensures that Finance teams adhere to evolving accounting standards and regulations by leveraging parallel programming, REST APIs, and incremental load ELT architecture to support the following stack:
 
 - **ERP**: [NetSuite](https://www.netsuite.com/), [SuiteScript](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4387799403.html#SuiteScript-2.x-RESTlet-Script-Type)
 - **Orchestrator**: [Airflow](https://airflow.apache.org/)
